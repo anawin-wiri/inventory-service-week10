@@ -1,10 +1,12 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Inject } from '@nestjs/common';
 import { AppService } from './app.service';
-import { Ctx, MessagePattern, MqttContext, Payload, RmqContext } from '@nestjs/microservices';
+import { ClientProxy, Ctx, MessagePattern, MqttContext, Payload, RmqContext } from '@nestjs/microservices';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) { }
+  constructor(private readonly appService: AppService,
+    @Inject('ORDER_SERVICE') private orderService: ClientProxy,
+  ) { }
 
   @Get()
   getHello(): string {
@@ -23,9 +25,11 @@ export class AppController {
     if (isInStock) {
       console.log('Inventory avaliable. Processing order.');
       chanel.ack(originalMsg);
+      this.orderService.emit('order_completed', data);
     } else {
       console.log('Order not avaliable');
       chanel.ack(originalMsg);
+      this.orderService.emit('order_canceled', data);
     }
   }
 }
